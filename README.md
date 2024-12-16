@@ -17,5 +17,8 @@ courses you’ve taken along with the grades received.
 ### Meet the Team
 
 - #### Joel Daniel Rico
+    - CWID: 7517
 - #### Ashley Chan
+    - CWID: 4376
 - #### Mark Garcia
+    - CWID: 3417 
