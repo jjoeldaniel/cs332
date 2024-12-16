@@ -3,6 +3,8 @@
 Welcome to the University Database Interface! This tool allows professors and students to easily access
 important course and academic information.
 
+> Access the project at https://ecs.fullerton.edu/~cs332g18/
+
 ### For Professors
 Search for your class schedule by entering your social security number. You’ll see the titles,
 classrooms, meeting days, and times of your courses. Count the number of students who received each distinct 
