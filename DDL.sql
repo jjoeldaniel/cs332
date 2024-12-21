@@ -1,14 +1,26 @@
--- Dropping ALL old tables
+-- ====================================
+-- 0) Disable FK checks for clean drops
+-- ====================================
+SET FOREIGN_KEY_CHECKS = 0;
 
+-- 1) DROP TABLES
 DROP TABLE IF EXISTS Enrollment;
+DROP TABLE IF EXISTS StudentMinor;
+DROP TABLE IF EXISTS Prerequisite;
 DROP TABLE IF EXISTS Student;
 DROP TABLE IF EXISTS Section;
 DROP TABLE IF EXISTS Course;
 DROP TABLE IF EXISTS Department;
 DROP TABLE IF EXISTS Professor;
 
--- Creating tables
+-- Re-enable FK checks
+SET FOREIGN_KEY_CHECKS = 1;
 
+-- ====================================
+-- 2) CREATE TABLES
+-- ====================================
+
+-- Professor
 CREATE TABLE Professor (
     SSN VARCHAR(9) PRIMARY KEY,
     Name VARCHAR(255),
@@ -24,6 +36,7 @@ CREATE TABLE Professor (
     CollegeDegrees VARCHAR(255)
 );
 
+-- Department
 CREATE TABLE Department (
     DeptNo INT PRIMARY KEY,
     DeptName VARCHAR(255),
@@ -33,6 +46,7 @@ CREATE TABLE Department (
     FOREIGN KEY (ChairpersonSSN) REFERENCES Professor(SSN)
 );
 
+-- Course
 CREATE TABLE Course (
     CourseNo INT PRIMARY KEY,
     CourseTitle VARCHAR(255),
@@ -42,6 +56,16 @@ CREATE TABLE Course (
     FOREIGN KEY (DeptNo) REFERENCES Department(DeptNo)
 );
 
+-- Prerequisite (self-referencing many-to-many for Courses)
+CREATE TABLE Prerequisite (
+    CourseNo INT,
+    PrereqCourseNo INT,
+    PRIMARY KEY (CourseNo, PrereqCourseNo),
+    FOREIGN KEY (CourseNo) REFERENCES Course(CourseNo),
+    FOREIGN KEY (PrereqCourseNo) REFERENCES Course(CourseNo)
+);
+
+-- Section
 CREATE TABLE Section (
     SectionNo INT,
     CourseNo INT,
@@ -56,8 +80,9 @@ CREATE TABLE Section (
     FOREIGN KEY (ProfessorSSN) REFERENCES Professor(SSN)
 );
 
+-- Student
 CREATE TABLE Student (
-    StudentID INT PRIMARY KEY,
+    CWID INT PRIMARY KEY,
     FirstName VARCHAR(255),
     LastName VARCHAR(255),
     StreetAddress VARCHAR(255),
@@ -70,69 +95,111 @@ CREATE TABLE Student (
     FOREIGN KEY (MajorDeptNo) REFERENCES Department(DeptNo)
 );
 
+-- StudentMinor (many-to-many between Student and Department)
+CREATE TABLE StudentMinor (
+    CWID INT,
+    DeptNo INT,
+    PRIMARY KEY (CWID, DeptNo),
+    FOREIGN KEY (CWID) REFERENCES Student(CWID),
+    FOREIGN KEY (DeptNo) REFERENCES Department(DeptNo)
+);
+
+-- Enrollment
 CREATE TABLE Enrollment (
-    StudentID INT,
+    CWID INT,
     SectionNo INT,
     CourseNo INT,
     Grade VARCHAR(2),
-    PRIMARY KEY (StudentID, SectionNo, CourseNo),
-    FOREIGN KEY (StudentID) REFERENCES Student(StudentID),
+    PRIMARY KEY (CWID, SectionNo, CourseNo),
+    FOREIGN KEY (CWID) REFERENCES Student(CWID),
     FOREIGN KEY (SectionNo, CourseNo) REFERENCES Section(SectionNo, CourseNo)
 );
 
--- Inserting data
+-- ====================================
+-- 3) INSERT MOCK DATA
+-- ====================================
 
-INSERT INTO Professor (SSN, Name, StreetAddress, City, State, ZipCode, AreaCode, PhoneNumber, Sex, Title, Salary, CollegeDegrees) VALUES
-('123456789', 'John Doe', '123 Main St', 'Anytown', 'CA', '12345', '123', '4567890', 'Male', 'Professor', 60000, 'Ph.D.'),
-('987654321', 'Jane Smith', '456 Oak Ave', 'Somecity', 'NY', '67890', '456', '7890123', 'Female', 'Associate Professor', 70000, 'M.S.'),
-('567890123', 'David Lee', '789 Pine Ln', 'Otherville', 'TX', '54321', '789', '0123456', 'Male', 'Assistant Professor', 55000, 'B.S.');
+-- 3.1) Professors
+INSERT INTO Professor 
+    (SSN, Name, StreetAddress, City, State, ZipCode, AreaCode, PhoneNumber, Sex, Title, Salary, CollegeDegrees)
+VALUES
+    ('123456789', 'Dr. John Smith', '123 Main St', 'Fullerton', 'CA', '92831', '714', '5551234', 'M', 'Professor', 95000.00, 'Ph.D. Computer Science'),
+    ('987654321', 'Dr. Mary Johnson', '456 College Ave', 'Fullerton', 'CA', '92831', '714', '5555678', 'F', 'Associate Professor', 85000.00, 'Ph.D. Mathematics'),
+    ('555555555', 'Dr. Alice Brown', '789 University Blvd', 'Fullerton', 'CA', '92831', '714', '5559999', 'F', 'Lecturer', 70000.00, 'M.S. Computer Science');
 
-INSERT INTO Department (DeptNo, DeptName, Telephone, OfficeLocation, ChairpersonSSN) VALUES
-(101, 'Computer Science', '555-1234', 'Building A', '123456789'),
-(102, 'Mathematics', '555-5678', 'Building B', '987654321');
+-- 3.2) Departments
+INSERT INTO Department 
+    (DeptNo, DeptName, Telephone, OfficeLocation, ChairpersonSSN)
+VALUES
+    (1, 'Computer Science', '714-123-4567', 'CS-100', '123456789'),
+    (2, 'Mathematics',     '714-234-5678', 'MH-200', '987654321'),
+    (3, 'Game Development','714-345-6789', 'GD-300', '555555555');
 
-INSERT INTO Course (CourseNo, CourseTitle, Textbook, Units, DeptNo) VALUES
-(201, 'Introduction to Programming', 'Programming for Dummies', 3, 101),
-(202, 'Data Structures and Algorithms', 'CLRS', 4, 101),
-(203, 'Calculus I', 'Stewart Calculus', 4, 102),
-(204, 'Linear Algebra', 'Linear Algebra Done Right', 3, 102);
+-- 3.3) Courses
+INSERT INTO Course 
+    (CourseNo, CourseTitle, Textbook, Units, DeptNo)
+VALUES
+    (120, 'CPSC 120A Intro to Programming Lecture', 'Intro to C++', 3, 1),
+    (121, 'CPSC 121A Object-Oriented Programming Lecture', 'OOP with C++', 3, 1),
+    (254, 'CPSC 254 Software Development with Open Source Systems', 'Open Source Software Dev', 3, 1),
+    (349, 'CPSC 349 Web Front-End Engineering', 'HTML, CSS, JS Mastery', 3, 1),
+    (351, 'CPSC 351 Operating Systems Concepts', 'Operating System Concepts', 3, 1),
+    (411, 'CPSC 411 Mobile Device Application Programming (iOS)', 'iOS Programming Guide', 3, 1),
+    (431, 'CPSC 431 Database and Applications', 'Database Systems, 2nd Ed', 3, 1),
+    (490, 'CPSC 490 Undergraduate Seminar in CS', 'No Textbook', 1, 1),
+    (500, 'Math 150A Calculus 1', 'Calculus: Early Transcendentals', 4, 2),
+    (501, 'Math 170B Math Structures 2', 'Discrete Mathematics & Its Applications', 3, 2),
+    (486, 'CPSC 486 Game Programming', 'Game Programming Patterns', 3, 3),
+    (489, 'CPSC 489 Game Development Project', 'Team-based Project Manual', 3, 3);
 
-INSERT INTO Section (SectionNo, CourseNo, Classroom, Seats, MeetingDays, BeginTime, EndTime, ProfessorSSN) VALUES
-(1, 201, 'Room 101', 30, 'MWF', '08:00:00', '08:50:00', '123456789'),
-(2, 201, 'Room 102', 25, 'TTh', '09:00:00', '10:15:00', '123456789'),
-(1, 202, 'Room 201', 35, 'MWF', '10:00:00', '10:50:00', '987654321'),
-(1, 203, 'Room 301', 40, 'MWF', '11:00:00', '11:50:00', '567890123'),
-(2, 203, 'Room 302', 30, 'TTh', '12:00:00', '13:15:00', '567890123'),
-(1, 204, 'Room 401', 25, 'MWF', '13:00:00', '13:50:00', '987654321');
+-- 3.4) Prerequisite
+INSERT INTO Prerequisite (CourseNo, PrereqCourseNo)
+VALUES
+    (121, 120),  -- OOP requires Intro to Programming
+    (254, 121),  -- Software Dev w/ OSS requires OOP
+    (349, 121),  -- Web Front-End requires OOP
+    (351, 121),  -- OS Concepts requires OOP
+    (490, 351),  -- Seminar requires OS Concepts
+    (489, 486);  -- Game Dev Project requires Game Programming
 
-INSERT INTO Student (StudentID, FirstName, LastName, StreetAddress, City, State, ZipCode, AreaCode, PhoneNumber, MajorDeptNo) VALUES
-(1, 'Alice', 'Wonderland', '123 Main St', 'Anytown', 'CA', '12345', '123', '4567890', 101),
-(2, 'Bob', 'The Builder', '456 Oak Ave', 'Somecity', 'NY', '67890', '456', '7890123', 102),
-(3, 'Charlie', 'Brown', '789 Pine Ln', 'Otherville', 'TX', '54321', '789', '0123456', 101),
-(4, 'David', 'Copperfield', '101 Elm St', 'Anytown', 'CA', '12345', '123', '4567891', 102),
-(5, 'Emily', 'Dickinson', '202 Oak Ave', 'Somecity', 'NY', '67890', '456', '7890124', 101),
-(6, 'Frank', 'Sinatra', '303 Pine Ln', 'Otherville', 'TX', '54321', '789', '0123457', 102),
-(7, 'Grace', 'Hopper', '404 Elm St', 'Anytown', 'CA', '12345', '123', '4567892', 101),
-(8, 'Henry', 'Ford', '505 Oak Ave', 'Somecity', 'NY', '67890', '456', '7890125', 102);
+-- 3.5) Sections
+INSERT INTO Section 
+    (SectionNo, CourseNo, Classroom, Seats, MeetingDays, BeginTime, EndTime, ProfessorSSN)
+VALUES
+    (1, 120, 'CS-101', 30, 'MW', '09:00', '10:15', '123456789'),
+    (2, 121, 'CS-102', 30, 'TR', '10:30', '11:45', '123456789'),
+    (1, 254, 'CS-201', 25, 'MW', '12:00', '13:15', '555555555'),
+    (1, 349, 'CS-202', 25, 'MW', '14:00', '15:15', '555555555'),
+    (1, 490, 'CS-303', 15, 'F',  '09:00', '11:45', '987654321'),
+    (1, 489, 'GD-100', 25, 'TR', '09:30', '10:45', '555555555'),
+    (1, 500, 'MH-201', 30, 'MW', '10:30', '11:45', '987654321');
 
-INSERT INTO Enrollment (StudentID, SectionNo, CourseNo, Grade) VALUES
-(1, 1, 201, 'A'),
-(1, 1, 202, 'B'),
-(2, 1, 203, 'C'),
-(3, 2, 201, 'B'),
-(4, 1, 204, 'A'),
-(5, 1, 201, 'C'),
-(6, 2, 203, 'A'),
-(7, 1, 202, 'B'),
-(8, 1, 203, 'B'),
-(1, 2, 201, 'A'),
-(2, 1, 204, 'C'),
-(3, 1, 202, 'A'),
-(4, 2, 203, 'B'),
-(5, 1, 203, 'B'),
-(6, 1, 204, 'A'),
-(7, 2, 201, 'C'),
-(8, 1, 202, 'A'),
-(1, 1, 204, 'B'),
-(2, 2, 201, 'B'),
-(3, 1, 203, 'A');
+-- 3.6) Students
+INSERT INTO Student 
+    (CWID, FirstName, LastName, StreetAddress, City, State, ZipCode, AreaCode, PhoneNumber, MajorDeptNo)
+VALUES
+    (800000001, 'Alice',   'Williams', '111 Apple St',  'Irvine',     'CA', '92618', '949', '1111111', 1),
+    (800000002, 'Bob',     'Johnson',  '222 Orange St', 'Anaheim',    'CA', '92804', '714', '2222222', 2),
+    (800000003, 'Charlie', 'Kim',      '333 Banana Ave','Fullerton',  'CA', '92831', '714', '3333333', 1),
+    (800000004, 'Diana',   'Lopez',    '444 Peach Rd',  'Brea',       'CA', '92821', '714', '4444444', 3),
+    (800000005, 'Ethan',   'Garcia',   '555 Grape Dr',  'Yorba Linda','CA', '92887', '714', '5555555', 1);
+
+-- 3.7) Student Minors
+INSERT INTO StudentMinor (CWID, DeptNo)
+VALUES
+    (800000001, 2),  -- Alice: major=CS(1), minor=Math(2)
+    (800000003, 2),  -- Charlie: major=CS(1), minor=Math(2)
+    (800000004, 1),  -- Diana: major=GameDev(3), minor=CS(1)
+    (800000005, 3);  -- Ethan: major=CS(1), minor=GameDev(3)
+
+-- 3.8) Enrollments
+INSERT INTO Enrollment (CWID, SectionNo, CourseNo, Grade)
+VALUES
+    (800000001, 1, 120, 'A-'),
+    (800000001, 2, 121, 'C+'),
+    (800000002, 1, 500, 'C'),
+    (800000003, 1, 120, 'A'),
+    (800000003, 2, 121, 'D'),
+    (800000004, 1, 489, 'B'),
+    (800000005, 1, 120, 'D+'),
+    (800000005, 1, 254, 'F');

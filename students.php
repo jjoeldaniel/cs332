@@ -73,8 +73,8 @@ $conn = connect();
             <!-- List Student's Courses -->
             <h3>List Student's Courses</h3>
             <form method="POST">
-                <label for="student_id">Enter Student Campus ID:</label>
-                <input type="text" id="student_id" name="student_id" value="<?php echo $_POST['student_id'] ?? ''; ?>">
+                <label for="cwidid">Enter Student CWID:</label>
+                <input type="text" id="cwid" name="cwid" value="<?php echo $_POST['cwid'] ?? ''; ?>">
                 <button type="submit">List Courses</button>
             </form>
 
@@ -83,15 +83,15 @@ $conn = connect();
                 <h4>Student's Courses:</h4>
                 <ul>
                     <?php
-                    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['student_id'])) {
-                        $student_id = $_POST['student_id'];
+                    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cwid'])) {
+                        $cwid = $_POST['cwid'];
                         $stmt = $conn->prepare(
                             "SELECT Course.CourseTitle, Enrollment.SectionNo, Enrollment.Grade 
                              FROM Enrollment
                              JOIN Course ON Enrollment.CourseNo = Course.CourseNo 
-                             WHERE Enrollment.StudentID = ?"
+                             WHERE Enrollment.CWID = ?"
                         );
-                        $stmt->bind_param("i", $student_id);
+                        $stmt->bind_param("i", $cwid);
                         $stmt->execute();
                         $result = $stmt->get_result();
 
@@ -102,7 +102,7 @@ $conn = connect();
                                 echo "<li>Grade: " . htmlspecialchars($row['Grade']) . "</li><br>";
                             }
                         } else {
-                            echo "<li>No courses found for the specified student ID.</li>";
+                            echo "<li>No courses found for the specified student CWID.</li>";
                         }
 
                         $stmt->close();
