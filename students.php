@@ -47,7 +47,25 @@ $conn = connect();
                     <?php
                     if (isset($_POST['course_number_student'])) {
                         $courseNumber = $_POST['course_number_student'];
-                        $stmt = $conn->prepare("SELECT SectionNo, Classroom, MeetingDays, BeginTime, EndTime, Seats FROM Section WHERE CourseNo = ?");
+
+                        // Join Course to get the "current" course,
+                        // then LEFT JOIN Prerequisite to check if there's a prerequisite,
+                        // then LEFT JOIN Course again (aliased as P) to get the prerequisite course title
+                        $stmt = $conn->prepare("
+                            SELECT
+                                S.SectionNo,
+                                S.Classroom,
+                                S.MeetingDays,
+                                S.BeginTime,
+                                S.EndTime,
+                                S.Seats,
+                                P.CourseTitle AS PrereqTitle
+                            FROM Section S
+                            JOIN Course C ON S.CourseNo = C.CourseNo
+                            LEFT JOIN Prerequisite R ON R.CourseNo = C.CourseNo
+                            LEFT JOIN Course P ON R.PrereqCourseNo = P.CourseNo
+                            WHERE S.CourseNo = ?
+                        ");
                         $stmt->bind_param("i", $courseNumber);
                         $stmt->execute();
                         $result = $stmt->get_result();
@@ -58,7 +76,16 @@ $conn = connect();
                                 echo "<li>Classroom: " . htmlspecialchars($row['Classroom']) . "</li>";
                                 echo "<li>Meeting Days: " . htmlspecialchars($row['MeetingDays']) . "</li>";
                                 echo "<li>Time: " . htmlspecialchars($row['BeginTime']) . " - " . htmlspecialchars($row['EndTime']) . "</li>";
-                                echo "<li>Enrolled Students: " . htmlspecialchars($row['Seats']) . "</li><br>";
+                                echo "<li>Enrolled Students: " . htmlspecialchars($row['Seats']) . "</li>";
+
+                                // Display Prerequisite Title if it exists
+                                $prereq = $row['PrereqTitle'] ?? 'None';
+                                if (empty($prereq)) {
+                                    $prereq = 'None';
+                                }
+                                echo "<li>Prerequisite Course: " . htmlspecialchars($prereq) . "</li>";
+                                
+                                echo "<br>";
                             }
                         } else {
                             echo "<li>No sections found for the specified course number.</li>";
