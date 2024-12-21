@@ -52,19 +52,30 @@ $conn = connect();
                     $professor = $result->fetch_assoc();
                     echo "<h4>Professor Details</h4>";
                     echo "<p>Name: " . $professor['Name'] . "</p>";
-                    echo "<p>Address: " . $professor['StreetAddress'] . ", " . $professor['City'] . ", " . $professor['State'] . " " . $professor['ZipCode'] . "</p>";
                     echo "<p>Phone: (" . $professor['AreaCode'] . ") " . $professor['PhoneNumber'] . "</p>";
                     echo "<p>Title: " . $professor['Title'] . "</p>";
-                    echo "<p>Salary: $" . number_format($professor['Salary'], 2) . "</p>";
                 } else {
                     echo "<p>No professor found with SSN: $ssn</p>";
                 }
 
                 // Display professor's courses
-                $query = "SELECT C.CourseTitle, S.Classroom, S.MeetingDays, S.BeginTime, S.EndTime 
-                          FROM Section S 
-                          INNER JOIN Course C ON S.CourseNo = C.CourseNo 
-                          WHERE S.ProfessorSSN = ?";
+                $query = "
+                    SELECT 
+                        C.CourseTitle,
+                        S.Classroom,
+                        S.MeetingDays,
+                        S.BeginTime,
+                        S.EndTime,
+                        P.CourseTitle AS PrereqTitle
+                    FROM Section S
+                    INNER JOIN Course C 
+                        ON S.CourseNo = C.CourseNo
+                    LEFT JOIN Prerequisite R 
+                        ON R.CourseNo = C.CourseNo
+                    LEFT JOIN Course P 
+                        ON R.PrereqCourseNo = P.CourseNo
+                    WHERE S.ProfessorSSN = ?
+                ";
                 $stmt = $conn->prepare($query);
                 $stmt->bind_param("s", $ssn);
                 $stmt->execute();
@@ -77,6 +88,11 @@ $conn = connect();
                         echo "<li>Classroom: " . $row['Classroom'] . "</li>";
                         echo "<li>Meeting Days: " . $row['MeetingDays'] . "</li>";
                         echo "<li>Time: " . $row['BeginTime'] . " - " . $row['EndTime'] . "</li>";
+
+                        // Display Prerequisite Title if it exists
+                        $prereqTitle = $row['PrereqTitle'] ?: 'None';
+                        echo "<li>Prerequisite: " . $prereqTitle . "</li>";
+
                         echo "<br>";
                     }
                     echo "</ul>";
